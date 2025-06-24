@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+
+# Run comprehensive quality checks before commit
+npm run quality-check

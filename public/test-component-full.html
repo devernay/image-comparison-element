@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Comparison Element - Full Component Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #333;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .test-container {
+            width: 800px;
+            height: 600px;
+            margin: 0 auto 20px;
+            border: 2px solid #555;
+            border-radius: 5px;
+        }
+        
+        image-comparison {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        button {
+            margin: 5px;
+            padding: 10px 15px;
+            background-color: #555;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background-color: #777;
+        }
+        
+        .info {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #444;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Image Comparison Element - Full Component Test</h1>
+    
+    <div class="test-container">
+        <image-comparison 
+            id="testTool"
+            display-mode="Under"
+            wipe-mode="simple">
+        </image-comparison>
+    </div>
+    
+    <div class="controls">
+        <h3>Test Controls</h3>
+        <button onclick="loadTestImages()">Load Test Images</button>
+        <button onclick="setMode('A')">Show A Only</button>
+        <button onclick="setMode('B')">Show B Only</button>
+        <button onclick="setMode('Under')">Under Mode</button>
+        <button onclick="setMode('OnionSkin')">OnionSkin Mode</button>
+        <button onclick="setMode('Diff')">Diff Mode</button>
+        <button onclick="setMode('InvDiff')">InvDiff Mode</button>
+        <br>
+        <button onclick="setWipeMode('simple')">Simple Wipe</button>
+        <button onclick="setWipeMode('full')">Full Wipe</button>
+        <button onclick="resetView()">Reset View</button>
+    </div>
+    
+    <div class="info">
+        <h3>Component Features Test</h3>
+        <p><strong>Mouse Controls:</strong></p>
+        <ul>
+            <li>Click and drag to move both images</li>
+            <li>Shift + click and drag to move only one image</li>
+            <li>Mouse wheel to zoom in/out</li>
+            <li>Ctrl/Cmd + hover for magnifier (8x zoom)</li>
+        </ul>
+        
+        <p><strong>Keyboard Shortcuts:</strong></p>
+        <ul>
+            <li><strong>v</strong> - Simple vertical wipe</li>
+            <li><strong>w</strong> - Full wipe interface</li>
+            <li><strong>a</strong> - Show only image A</li>
+            <li><strong>b</strong> - Show only image B</li>
+            <li><strong>u</strong> - Under composite mode</li>
+            <li><strong>o</strong> - OnionSkin composite mode</li>
+            <li><strong>d</strong> - Diff composite mode</li>
+            <li><strong>i</strong> - InvDiff composite mode</li>
+            <li><strong>c</strong> - Toggle checkerboard background</li>
+            <li><strong>r</strong> - Reset view</li>
+            <li><strong>h</strong> or <strong>?</strong> - Toggle help screen</li>
+        </ul>
+        
+        <p><strong>Wipe Interface (Full Mode):</strong></p>
+        <ul>
+            <li>Center dot - drag to move wipe line</li>
+            <li>Outer dot - drag to rotate wipe line</li>
+            <li>Arc handle - drag to adjust alpha blending</li>
+        </ul>
+        
+        <p><strong>File Loading:</strong></p>
+        <ul>
+            <li>Click A or B boxes to upload files</li>
+            <li>Drag and drop images anywhere</li>
+            <li>Drop single image anywhere (except B box) to load as A</li>
+            <li>Drop multiple images to load first as A, second as B</li>
+        </ul>
+    </div>
+    
+    <script type="module" src="js/image-comparison-element.js"></script>
+    <script>
+        const element = document.getElementById('testTool');
+        
+        function loadTestImages() {
+            // Load example images if they exist
+            element.setAttribute('image-a', 'examples/barbara_85.jpg');
+            element.setAttribute('image-b', 'examples/barbara_50.jpg');
+        }
+        
+        function setMode(mode) {
+            element.setAttribute('display-mode', mode);
+        }
+        
+        function setWipeMode(mode) {
+            element.setAttribute('wipe-mode', mode);
+        }
+        
+        function resetView() {
+            // Trigger reset by dispatching a keyboard event
+            const event = new KeyboardEvent('keydown', { key: 'r' });
+            element.dispatchEvent(event);
+        }
+        
+        // Auto-load test images after a short delay
+        setTimeout(loadTestImages, 1000);
+    </script>
+</body>
+</html>

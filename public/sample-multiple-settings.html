@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiple Comparison Settings</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #333;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .comparison-item {
+            border: 2px solid #555;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .comparison-title {
+            background-color: #444;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .comparison-element {
+            height: 300px;
+        }
+        
+        image-comparison {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>Multiple Comparison Settings</h1>
+    <p style="text-align: center; margin-bottom: 30px;">
+        Same images (barbara_85.jpg vs barbara_50.jpg) with different display modes and wipe settings
+    </p>
+    
+    <div class="grid-container">
+        <div class="comparison-item">
+            <div class="comparison-title">Under Mode - Simple Wipe</div>
+            <div class="comparison-element">
+                <image-comparison 
+                    image-a="examples/barbara_85.jpg"
+                    image-b="examples/barbara_50.jpg"
+                    display-mode="Under"
+                    wipe-mode="simple">
+                </image-comparison>
+            </div>
+        </div>
+        
+        <div class="comparison-item">
+            <div class="comparison-title">OnionSkin Mode - Full Wipe</div>
+            <div class="comparison-element">
+                <image-comparison 
+                    image-a="examples/barbara_85.jpg"
+                    image-b="examples/barbara_50.jpg"
+                    display-mode="OnionSkin"
+                    wipe-mode="full">
+                </image-comparison>
+            </div>
+        </div>
+        
+        <div class="comparison-item">
+            <div class="comparison-title">Diff Mode - Simple Wipe</div>
+            <div class="comparison-element">
+                <image-comparison 
+                    image-a="examples/barbara_85.jpg"
+                    image-b="examples/barbara_50.jpg"
+                    display-mode="Diff"
+                    wipe-mode="simple">
+                </image-comparison>
+            </div>
+        </div>
+        
+        <div class="comparison-item">
+            <div class="comparison-title">InvDiff Mode - Full Wipe</div>
+            <div class="comparison-element">
+                <image-comparison 
+                    image-a="examples/barbara_85.jpg"
+                    image-b="examples/barbara_50.jpg"
+                    display-mode="InvDiff"
+                    wipe-mode="full">
+                </image-comparison>
+            </div>
+        </div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 30px; max-width: 800px; margin-left: auto; margin-right: auto;">
+        <p>Each comparison element operates independently with different settings. 
+        You can interact with each one using mouse and keyboard controls.</p>
+        
+        <p><strong>Note:</strong> Focus on a specific element by clicking on it, then use keyboard shortcuts 
+        to change its mode and settings.</p>
+    </div>
+    
+    <script type="module" src="js/image-comparison-element.js"></script>
+</body>
+</html>

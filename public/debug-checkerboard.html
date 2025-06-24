@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Checkerboard</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #222;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 1px solid #555;
+            margin: 10px;
+        }
+        .test-section {
+            margin: 20px 0;
+        }
+        .info {
+            background: #333;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Checkerboard Debug Test</h1>
+    
+    <div class="info">
+        <p><strong>Fixed Pattern Approach:</strong> Checkerboard is now fixed to the canvas, not moving with pan/zoom operations (matches single version).</p>
+    </div>
+    
+    <div class="test-section">
+        <h2>Manual Pattern Test (Fixed to Canvas)</h2>
+        <canvas id="test-canvas" width="400" height="300"></canvas>
+        <button onclick="toggleCheckerboard()">Toggle Checkerboard</button>
+        <p>Pattern should cover entire canvas and remain fixed.</p>
+    </div>
+
+    <div class="test-section">
+        <h2>Component Test</h2>
+        <image-comparison 
+            id="component-test"
+            style="width: 400px; height: 300px; display: block; border: 1px solid #555;"
+            magnifier-radius="100"
+            magnifier-zoom-factor="4">
+        </image-comparison>
+        <p>Press 'c' to toggle checkerboard in component. Pattern should be fixed to canvas.</p>
+    </div>
+
+    <script type="module" src="js/image-comparison-element.js"></script>
+    <script>
+        let showCheckerboard = false;
+        
+        function createCheckerboardPattern(ctx, squareSize = 10, color1 = 'black', color2 = '#808080') {
+            const patternCanvas = document.createElement('canvas');
+            patternCanvas.width = squareSize * 2;
+            patternCanvas.height = squareSize * 2;
+            
+            const patternCtx = patternCanvas.getContext('2d');
+            if (!patternCtx) return null;
+            
+            // Draw the pattern
+            patternCtx.fillStyle = color1;
+            patternCtx.fillRect(0, 0, squareSize * 2, squareSize * 2);
+            
+            patternCtx.fillStyle = color2;
+            patternCtx.fillRect(0, 0, squareSize, squareSize);
+            patternCtx.fillRect(squareSize, squareSize, squareSize, squareSize);
+            
+            return ctx.createPattern(patternCanvas, 'repeat');
+        }
+        
+        function drawCheckerboard(ctx, width, height) {
+            const pattern = createCheckerboardPattern(ctx);
+            if (!pattern) return;
+            
+            // Fixed pattern - no offset, no translation
+            ctx.save();
+            ctx.fillStyle = pattern;
+            ctx.fillRect(0, 0, width, height);
+            ctx.restore();
+        }
+        
+        function toggleCheckerboard() {
+            const canvas = document.getElementById('test-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            showCheckerboard = !showCheckerboard;
+            
+            if (showCheckerboard) {
+                console.log('Drawing fixed checkerboard pattern...');
+                drawCheckerboard(ctx, canvas.width, canvas.height);
+            }
+        }
+        
+        // Initialize with checkerboard visible
+        showCheckerboard = true;
+        toggleCheckerboard();
+    </script>
+</body>
+</html>

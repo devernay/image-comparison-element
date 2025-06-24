@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Comparison Element</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #333;
+            font-family: Arial, sans-serif;
+            color: #fff;
+        }
+        
+        image-comparison {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <image-comparison id="mainTool"></image-comparison>
+    
+    <script type="module" src="js/image-comparison-element.js"></script>
+    <script>
+        // Handle URL parameters for image loading (same as original)
+        const urlParams = new URLSearchParams(window.location.search);
+        const imageA = urlParams.get('A');
+        const imageB = urlParams.get('B');
+        
+        const element = document.getElementById('mainTool');
+        
+        if (imageA) {
+            element.setAttribute('image-a', imageA);
+        }
+        
+        if (imageB) {
+            element.setAttribute('image-b', imageB);
+        }
+    </script>
+</body>
+</html>

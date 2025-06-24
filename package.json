@@ -1,0 +1,38 @@
+{
+  "name": "image-comparison-element",
+  "version": "1.0.0",
+  "description": "An HTML element for comparing two images with various compositing modes and a wipe interface",
+  "main": "server.js",
+  "scripts": {
+    "build": "tsc && webpack",
+    "build:prod": "tsc && webpack --mode=production",
+    "start": "node server.js",
+    "dev": "concurrently \"tsc --watch\" \"webpack --watch\" \"nodemon server.js\"",
+    "clean": "rimraf --glob \"node_modules\" \"public/js\" \"public/js-element\" --impl=manual",
+    "dist": "npm run build && node scripts/create-dist.js",
+    "dist:prod": "npm run build:prod && node scripts/create-dist.js",
+    "lint": "eslint src/**/*.ts",
+    "dead-code": "ts-prune",
+    "type-check": "tsc --noEmit",
+    "quality-check": "node scripts/quality-check.cjs",
+    "precommit": "npm run quality-check"
+  },
+  "dependencies": {
+    "archiver": "^6.0.2",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.35.0",
+    "@typescript-eslint/parser": "^8.35.0",
+    "concurrently": "^8.2.0",
+    "eslint": "^9.29.0",
+    "eslint-plugin-jsdoc": "^51.2.3",
+    "glob": "^11.0.2",
+    "nodemon": "^3.0.1",
+    "rimraf": "^6.0.1",
+    "ts-prune": "^0.10.3",
+    "typescript": "^5.1.6",
+    "webpack": "^5.99.9",
+    "webpack-cli": "^5.1.4"
+  }
+}
