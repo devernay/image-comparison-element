@@ -2,6 +2,8 @@
 
 An HTML element for comparing two images with various compositing modes and a wipe interface, that can be embedded in any web page.
 
+Demo: https://devernay.github.io/image-comparison-element/
+
 ## Features
 
 - **Multiple Composite Modes**: Under, OnionSkin, Diff, InvDiff, A-only, B-only
