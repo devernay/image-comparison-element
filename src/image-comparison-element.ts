@@ -851,14 +851,14 @@ export class ImageComparisonElement extends HTMLElement {
     
     /**
      * Update help screen visibility based on whether images are loaded and showHelp state.
-     * Shows help screen when fewer than 2 images are loaded OR when manually toggled on.
-     * Auto-hides when both images are loaded (unless manually toggled on).
+     * Shows help screen when no images are loaded OR when manually toggled on.
+     * Auto-hides when at least one image is loaded (unless manually toggled on).
      */
     private updateHelpScreenVisibility(): void {
         const imagesLoaded = (this.state.imageALoaded ? 1 : 0) + (this.state.imageBLoaded ? 1 : 0);
         
-        // Auto-hide help when both images are loaded for the first time
-        if (imagesLoaded >= 2) {
+        // Auto-hide help when at least one image is loaded for the first time
+        if (imagesLoaded >= 1) {
             // If help was auto-shown (not manually toggled), hide it and set showHelp to false
             if (this.state.showHelp && !this.manuallyToggledHelp) {
                 this.state.showHelp = false;
@@ -873,7 +873,7 @@ export class ImageComparisonElement extends HTMLElement {
                 this.helpScreen.style.display = 'none';
             }
         }
-        // Show help screen if fewer than 2 images are loaded
+        // Show help screen if no images are loaded
         else {
             this.helpScreen.style.display = 'flex';
             // Reset manual toggle flag when auto-showing
@@ -924,6 +924,10 @@ export class ImageComparisonElement extends HTMLElement {
      * allowing the same logic to handle both image A and image B loading.
      */
     private async loadImage(url: string, imageType: ImageType, filename?: string): Promise<void> {
+        // Show loading message
+        this.dragMessage.textContent = 'Loading image...';
+        this.dragMessage.style.opacity = '1';
+        
         // Log the loading operation for debugging and monitoring
         console.log(`Loading image ${imageType} from URL:`, url);
         
@@ -1008,6 +1012,9 @@ export class ImageComparisonElement extends HTMLElement {
                     // PSNR provides quantitative comparison metrics
                     this.updatePSNR();
                     
+                    // Hide loading message
+                    this.dragMessage.style.opacity = '0';
+                    
                     // Resolve the promise to indicate successful completion
                     resolve();
                 } catch (error) {
@@ -1019,6 +1026,9 @@ export class ImageComparisonElement extends HTMLElement {
             
             // Configure error handler for image loading failures
             img.onerror = (error): void => {
+                // Hide loading message
+                this.dragMessage.style.opacity = '0';
+                
                 // Log the error for debugging purposes
                 console.error(`Error loading image ${imageType}:`, error);
                 
@@ -1438,6 +1448,16 @@ export class ImageComparisonElement extends HTMLElement {
         // Drag and drop event listeners
         this.addEventListener('dragover', this.handleDragOver.bind(this));
         this.addEventListener('drop', this.handleDrop.bind(this));
+        this.addEventListener('dragleave', this.handleDragLeave.bind(this));
+        
+        // Add specific drag/drop listeners to upload boxes for better detection
+        this.uploadA.addEventListener('dragover', this.handleUploadBoxDragOver.bind(this, 'A'));
+        this.uploadA.addEventListener('dragleave', this.handleUploadBoxDragLeave.bind(this, 'A'));
+        this.uploadA.addEventListener('drop', this.handleUploadBoxDrop.bind(this, 'A'));
+        
+        this.uploadB.addEventListener('dragover', this.handleUploadBoxDragOver.bind(this, 'B'));
+        this.uploadB.addEventListener('dragleave', this.handleUploadBoxDragLeave.bind(this, 'B'));
+        this.uploadB.addEventListener('drop', this.handleUploadBoxDrop.bind(this, 'B'));
         
         // Keyboard event listeners - only when this component has focus
         this.addEventListener('keydown', this.handleKeyDown.bind(this));
@@ -1948,8 +1968,73 @@ export class ImageComparisonElement extends HTMLElement {
     private handleDragOver(e: DragEvent): void {
         e.preventDefault();
         if (e.dataTransfer?.types.includes('Files')) {
-            this.dragMessage.textContent = 'Drop images to load';
+            const fileCount = e.dataTransfer.files?.length || e.dataTransfer.items?.length || 1;
+            
+            if (fileCount > 2) {
+                this.dragMessage.textContent = 'Drop only up to 2 images';
+            } else if (fileCount === 1) {
+                this.dragMessage.textContent = 'Drop to load as image A';
+            } else {
+                this.dragMessage.textContent = 'Drop to load as images A and B';
+            }
             this.dragMessage.style.opacity = '1';
+        }
+    }
+    
+    /**
+     * Handle drag leave events for the main component.
+     */
+    private handleDragLeave(e: DragEvent): void {
+        // Only hide message if leaving the component entirely
+        if (!this.contains(e.relatedTarget as Node)) {
+            this.dragMessage.style.opacity = '0';
+        }
+    }
+    
+    /**
+     * Handle drag over events specifically for upload boxes.
+     */
+    private handleUploadBoxDragOver(imageType: 'A' | 'B', e: DragEvent): void {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.dataTransfer?.types.includes('Files')) {
+            // Don't highlight or change message if both images are loaded
+            if (this.state.imageALoaded && this.state.imageBLoaded) {
+                return;
+            }
+            
+            const uploadBox = imageType === 'A' ? this.uploadA : this.uploadB;
+            uploadBox.style.backgroundColor = '#888';
+            this.dragMessage.textContent = `Drop to load as image ${imageType}`;
+            this.dragMessage.style.opacity = '1';
+        }
+    }
+    
+    /**
+     * Handle drag leave events for upload boxes.
+     */
+    private handleUploadBoxDragLeave(imageType: 'A' | 'B', e: DragEvent): void {
+        e.preventDefault();
+        e.stopPropagation();
+        const uploadBox = imageType === 'A' ? this.uploadA : this.uploadB;
+        uploadBox.style.backgroundColor = '';
+    }
+    
+    /**
+     * Handle drop events specifically for upload boxes.
+     */
+    private handleUploadBoxDrop(imageType: 'A' | 'B', e: DragEvent): void {
+        e.preventDefault();
+        e.stopPropagation();
+        this.dragMessage.style.opacity = '0';
+        
+        const uploadBox = imageType === 'A' ? this.uploadA : this.uploadB;
+        uploadBox.style.backgroundColor = '';
+        
+        if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+            const file = e.dataTransfer.files[0];
+            const url = URL.createObjectURL(file);
+            this.loadImage(url, imageType, file.name);
         }
     }
     
@@ -1961,29 +2046,28 @@ export class ImageComparisonElement extends HTMLElement {
         this.dragMessage.style.opacity = '0';
         
         if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
-            const target = e.target as HTMLElement;
+            // Don't load if more than 2 files
+            if (e.dataTransfer.files.length > 2) {
+                return;
+            }
             
-            if (target === this.uploadA || this.uploadA.contains(target)) {
-                const file = e.dataTransfer.files[0];
-                const url = URL.createObjectURL(file);
-                this.loadImage(url, 'A',file.name);
-            } else if (target === this.uploadB || this.uploadB.contains(target)) {
-                const file = e.dataTransfer.files[0];
-                const url = URL.createObjectURL(file);
-                this.loadImage(url, 'B',file.name);
-            } else {
-                // Drop anywhere else - load first as A, second as B
-                if (e.dataTransfer.files.length >= 1) {
-                    const fileA = e.dataTransfer.files[0];
-                    const urlA = URL.createObjectURL(fileA);
-                    this.loadImage(urlA, 'A',fileA.name);
-                }
-                
-                if (e.dataTransfer.files.length >= 2) {
-                    const fileB = e.dataTransfer.files[1];
-                    const urlB = URL.createObjectURL(fileB);
-                    this.loadImage(urlB, 'B',fileB.name);
-                }
+            // Show appropriate loading message
+            if (e.dataTransfer.files.length === 2) {
+                this.dragMessage.textContent = 'Loading images...';
+                this.dragMessage.style.opacity = '1';
+            }
+            
+            // Drop anywhere else - load first as A, second as B
+            if (e.dataTransfer.files.length >= 1) {
+                const fileA = e.dataTransfer.files[0];
+                const urlA = URL.createObjectURL(fileA);
+                this.loadImage(urlA, 'A', fileA.name);
+            }
+            
+            if (e.dataTransfer.files.length >= 2) {
+                const fileB = e.dataTransfer.files[1];
+                const urlB = URL.createObjectURL(fileB);
+                this.loadImage(urlB, 'B', fileB.name);
             }
         }
     }

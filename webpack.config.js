@@ -7,7 +7,7 @@ module.exports = (env, argv) => {
     mode: isProduction ? 'production' : 'development',
     entry: './public/js/image-comparison-element.js',
     output: {
-      filename: isProduction ? 'image-comparison-element.min.js' : 'image-comparison-element.js',
+      filename: 'image-comparison-element.js',
       path: path.resolve(__dirname, 'public/js'),
     },
     devtool: isProduction ? false : 'source-map',

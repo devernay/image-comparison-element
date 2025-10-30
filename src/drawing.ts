@@ -178,28 +178,36 @@ function drawSingleView(state: ElementState): void {
             break;
             
         case 'Under':
-            // Draw A first, then B with alpha blending
+            // Draw A first, then B with alpha blending (only when both are loaded)
             if (state.imageALoaded && state.imageA) {
                 drawSingleImage(state, 'A');
             }
             if (state.imageBLoaded && state.imageB) {
-                state.ctx.globalAlpha = 0.5;
+                // Only use alpha blending if both images are loaded
+                if (state.imageALoaded && state.imageA) {
+                    state.ctx.globalAlpha = state.wipeAlpha;
+                }
                 drawSingleImage(state, 'B');
                 state.ctx.globalAlpha = 1.0;
             }
             break;
             
         case 'OnionSkin':
-            // Draw A first, then B with additive blending
+            // Draw A first, then B with additive blending (only when both are loaded)
             if (state.imageALoaded && state.imageA) {
                 drawSingleImage(state, 'A');
             }
             if (state.imageBLoaded && state.imageB) {
-                state.ctx.globalAlpha = 0.5;
-                const originalCompositeOp = state.ctx.globalCompositeOperation;
-                state.ctx.globalCompositeOperation = 'lighter';
-                drawSingleImage(state, 'B');
-                state.ctx.globalCompositeOperation = originalCompositeOp;
+                // Only use alpha blending if both images are loaded
+                if (state.imageALoaded && state.imageA) {
+                    state.ctx.globalAlpha = state.wipeAlpha;
+                    const originalCompositeOp = state.ctx.globalCompositeOperation;
+                    state.ctx.globalCompositeOperation = 'lighter';
+                    drawSingleImage(state, 'B');
+                    state.ctx.globalCompositeOperation = originalCompositeOp;
+                } else {
+                    drawSingleImage(state, 'B');
+                }
                 state.ctx.globalAlpha = 1.0;
             }
             break;
