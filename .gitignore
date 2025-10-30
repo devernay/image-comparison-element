@@ -163,4 +163,5 @@ yarn-error.log*
 # Temporary files
 .tmp/
 .temp/
+temp/
 /public/js-element

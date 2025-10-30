@@ -5,7 +5,7 @@ module.exports = (env, argv) => {
   
   return {
     mode: isProduction ? 'production' : 'development',
-    entry: './public/js/image-comparison-element.js',
+    entry: './temp/js/image-comparison-element.js',
     output: {
       filename: 'image-comparison-element.js',
       path: path.resolve(__dirname, 'public/js'),
