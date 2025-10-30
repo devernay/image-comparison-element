@@ -618,7 +618,7 @@ function renderImageWithMipMaps(
     let mipLevel = 0;
     let currentScale = scale;
     
-    while (currentScale < 0.5 && mipLevel < mipMaps.length - 1) {
+    while (currentScale < 0.5 && mipLevel < mipMaps.length) {
         currentScale *= 2;
         mipLevel++;
     }

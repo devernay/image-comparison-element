@@ -13,8 +13,8 @@ import { MipMapPyramid } from './types';
  */
 export function createMipMaps(image: HTMLImageElement): Promise<MipMapPyramid> {
     return new Promise((resolve) => {
-        // Start with the original image as level 0
-        const mipMaps: MipMapPyramid = [image];
+        // Mipmap array contains only downsampled versions, not the original
+        const mipMaps: MipMapPyramid = [];
         
         // Track the current dimensions
         let width = image.width;
@@ -25,6 +25,9 @@ export function createMipMaps(image: HTMLImageElement): Promise<MipMapPyramid> {
             resolve(mipMaps);
             return;
         }
+        
+        // Track the previous level image (start with original)
+        let previousImage: HTMLImageElement | HTMLCanvasElement = image;
         
         /**
          * Recursive function to create the next mip level
@@ -43,35 +46,39 @@ export function createMipMaps(image: HTMLImageElement): Promise<MipMapPyramid> {
             width = Math.max(1, Math.floor(width / 2));
             height = Math.max(1, Math.floor(height / 2));
             
-            // Create a temporary canvas for downsampling
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            
-            // Handle case where canvas context couldn't be created
-            if (!ctx) {
-                resolve(mipMaps);
-                return;
-            }
-            
-            // Use bilinear interpolation for better quality downsampling
-            ctx.imageSmoothingEnabled = true;
-            
-            // Draw the previous level image at half size
-            ctx.drawImage(mipMaps[mipMaps.length - 1], 0, 0, width, height);
-            
-            // Convert canvas to image
-            const img = new Image();
-            
-            // When the image loads, add it to the pyramid and continue
-            img.onload = (): void => {
-                mipMaps.push(img);
-                createNextLevel(); // Create next level recursively
-            };
-            
-            // Set the image source to the canvas data
-            img.src = canvas.toDataURL();
+            // Defer to next event loop to keep UI responsive
+            setTimeout(() => {
+                // Create a temporary canvas for downsampling
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                
+                // Handle case where canvas context couldn't be created
+                if (!ctx) {
+                    resolve(mipMaps);
+                    return;
+                }
+                
+                // Use bilinear interpolation for better quality downsampling
+                ctx.imageSmoothingEnabled = true;
+                
+                // Draw the previous level image at half size
+                ctx.drawImage(previousImage, 0, 0, width, height);
+                
+                // Convert canvas to image
+                const img = new Image();
+                
+                // When the image loads, add it to the pyramid and continue
+                img.onload = (): void => {
+                    mipMaps.push(img);
+                    previousImage = img;
+                    createNextLevel(); // Create next level recursively
+                };
+                
+                // Set the image source to the canvas data
+                img.src = canvas.toDataURL();
+            }, 0);
         };
         
         // Start creating mip levels

@@ -23,7 +23,7 @@
  * @param offsetBX - X offset for image B
  * @param offsetBY - Y offset for image B
  * @param scale - Current scale factor
- * @returns PSNR value as a formatted string, or "N/A" if calculation fails
+ * @param callback - Callback to receive the result asynchronously
  */
 export function calculatePSNRForImages(
     imageAData: ImageData | null,
@@ -34,11 +34,13 @@ export function calculatePSNRForImages(
     offsetAY: number,
     offsetBX: number,
     offsetBY: number,
-    scale: number
-): string {
+    scale: number,
+    callback: (result: string) => void
+): void {
     // Check if we have both images and their data
     if (!imageAData || !imageBData || !imageA || !imageB) {
-        return "PSNR: N/A";
+        callback("PSNR: N/A");
+        return;
     }
     
     // Calculate the overlapping region between the two images
@@ -49,56 +51,76 @@ export function calculatePSNRForImages(
     );
     
     if (!overlapInfo || overlapInfo.width <= 0 || overlapInfo.height <= 0) {
-        return "PSNR: No overlap";
+        callback("PSNR: No overlap");
+        return;
     }
     
     // Calculate MSE (Mean Squared Error) over the overlapping region
+    // Process in chunks to keep UI responsive
     let mse = 0;
     let pixelCount = 0;
+    let currentRow = 0;
+    const rowsPerChunk = 50; // Process 50 rows at a time
     
-    for (let y = 0; y < overlapInfo.height; y++) {
-        for (let x = 0; x < overlapInfo.width; x++) {
-            // Calculate pixel positions in each image
-            const aX = Math.floor(overlapInfo.aStartX + x);
-            const aY = Math.floor(overlapInfo.aStartY + y);
-            const bX = Math.floor(overlapInfo.bStartX + x);
-            const bY = Math.floor(overlapInfo.bStartY + y);
-            
-            // Check bounds
-            if (aX >= 0 && aX < imageA.width && aY >= 0 && aY < imageA.height &&
-                bX >= 0 && bX < imageB.width && bY >= 0 && bY < imageB.height) {
+    const processChunk = (): void => {
+        const endRow = Math.min(currentRow + rowsPerChunk, overlapInfo.height);
+        
+        for (let y = currentRow; y < endRow; y++) {
+            for (let x = 0; x < overlapInfo.width; x++) {
+                // Calculate pixel positions in each image
+                const aX = Math.floor(overlapInfo.aStartX + x);
+                const aY = Math.floor(overlapInfo.aStartY + y);
+                const bX = Math.floor(overlapInfo.bStartX + x);
+                const bY = Math.floor(overlapInfo.bStartY + y);
                 
-                // Get pixel indices
-                const aIndex = (aY * imageA.width + aX) * 4;
-                const bIndex = (bY * imageB.width + bX) * 4;
-                
-                // Calculate squared differences for RGB channels
-                const rDiff = imageAData.data[aIndex] - imageBData.data[bIndex];
-                const gDiff = imageAData.data[aIndex + 1] - imageBData.data[bIndex + 1];
-                const bDiff = imageAData.data[aIndex + 2] - imageBData.data[bIndex + 2];
-                
-                mse += rDiff * rDiff + gDiff * gDiff + bDiff * bDiff;
-                pixelCount++;
+                // Check bounds
+                if (aX >= 0 && aX < imageA.width && aY >= 0 && aY < imageA.height &&
+                    bX >= 0 && bX < imageB.width && bY >= 0 && bY < imageB.height) {
+                    
+                    // Get pixel indices
+                    const aIndex = (aY * imageA.width + aX) * 4;
+                    const bIndex = (bY * imageB.width + bX) * 4;
+                    
+                    // Calculate squared differences for RGB channels
+                    const rDiff = imageAData.data[aIndex] - imageBData.data[bIndex];
+                    const gDiff = imageAData.data[aIndex + 1] - imageBData.data[bIndex + 1];
+                    const bDiff = imageAData.data[aIndex + 2] - imageBData.data[bIndex + 2];
+                    
+                    mse += rDiff * rDiff + gDiff * gDiff + bDiff * bDiff;
+                    pixelCount++;
+                }
             }
         }
-    }
+        
+        currentRow = endRow;
+        
+        if (currentRow < overlapInfo.height) {
+            // More rows to process - schedule next chunk
+            setTimeout(processChunk, 0);
+        } else {
+            // All rows processed - calculate final result
+            if (pixelCount === 0) {
+                callback("PSNR: No valid pixels");
+                return;
+            }
+            
+            // Calculate average MSE
+            mse = mse / (pixelCount * 3); // Divide by 3 for RGB channels
+            
+            if (mse === 0) {
+                callback("PSNR: ∞ (identical)");
+                return;
+            }
+            
+            // Calculate PSNR: 20 * log10(MAX_I) - 10 * log10(MSE)
+            // where MAX_I is the maximum possible pixel value (255 for 8-bit)
+            const psnr = 20 * Math.log10(255) - 10 * Math.log10(mse);
+            callback(`PSNR: ${psnr.toFixed(2)} dB`);
+        }
+    };
     
-    if (pixelCount === 0) {
-        return "PSNR: No valid pixels";
-    }
-    
-    // Calculate average MSE
-    mse = mse / (pixelCount * 3); // Divide by 3 for RGB channels
-    
-    if (mse === 0) {
-        return "PSNR: ∞ (identical)";
-    }
-    
-    // Calculate PSNR: 20 * log10(MAX_I) - 10 * log10(MSE)
-    // where MAX_I is the maximum possible pixel value (255 for 8-bit)
-    const psnr = 20 * Math.log10(255) - 10 * Math.log10(mse);
-    
-    return `PSNR: ${psnr.toFixed(2)} dB`;
+    // Start processing
+    processChunk();
 }
 
 /**

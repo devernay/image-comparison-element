@@ -924,9 +924,27 @@ export class ImageComparisonElement extends HTMLElement {
      * allowing the same logic to handle both image A and image B loading.
      */
     private async loadImage(url: string, imageType: ImageType, filename?: string): Promise<void> {
-        // Show loading message
-        this.dragMessage.textContent = 'Loading image...';
-        this.dragMessage.style.opacity = '1';
+        // Clear old resources immediately
+        if (imageType === 'A') {
+            this.state.imageA = null;
+            this.state.imageAData = null;
+            this.state.imageAMipMaps = null;
+            this.state.imageALoaded = false;
+        } else {
+            this.state.imageB = null;
+            this.state.imageBData = null;
+            this.state.imageBMipMaps = null;
+            this.state.imageBLoaded = false;
+        }
+        
+        // Redraw immediately to clear old image
+        this.draw();
+        
+        // Show loading message only if not already visible (to preserve plural form)
+        if (this.dragMessage.style.opacity !== '1') {
+            this.dragMessage.textContent = 'Loading image...';
+            this.dragMessage.style.opacity = '1';
+        }
         
         // Log the loading operation for debugging and monitoring
         console.log(`Loading image ${imageType} from URL:`, url);
@@ -975,16 +993,6 @@ export class ImageComparisonElement extends HTMLElement {
                         }
                     }
                     
-                    // Generate mip-maps asynchronously for efficient rendering at different zoom levels
-                    // Mip-maps provide pre-scaled versions of the image to improve performance
-                    // and visual quality when zoomed out
-                    const mipMaps = await createMipMaps(img);
-                    if (imageType === 'A') {
-                        this.state.imageAMipMaps = mipMaps;
-                    } else {
-                        this.state.imageBMipMaps = mipMaps;
-                    }
-                    
                     // Update filename display with intelligent fallback handling
                     // Priority: provided filename > URL extraction > default fallback
                     // This fixes the "Uploaded file" issue for drag-and-drop operations
@@ -1004,16 +1012,34 @@ export class ImageComparisonElement extends HTMLElement {
                     // This ensures both images are visible and properly scaled
                     this.fitImagesToViewport();
                     
-                    // Trigger complete redraw with the newly loaded image
-                    // This updates all visual elements including composite modes
-                    this.draw();
-                    
-                    // Calculate and update PSNR if both images are loaded
-                    // PSNR provides quantitative comparison metrics
-                    this.updatePSNR();
+                    // Only redraw if both images are loaded, or if only one image exists
+                    if (this.state.imageALoaded && this.state.imageBLoaded) {
+                        // Both images loaded - draw and calculate PSNR
+                        this.draw();
+                        this.updatePSNR();
+                    } else if ((imageType === 'A' && !this.state.imageBLoaded) || 
+                               (imageType === 'B' && !this.state.imageALoaded)) {
+                        // Only one image loaded so far - draw it
+                        this.draw();
+                    }
                     
                     // Hide loading message
                     this.dragMessage.style.opacity = '0';
+                    
+                    // Generate mip-maps asynchronously in the background
+                    // This doesn't block the UI and improves rendering quality later
+                    createMipMaps(img).then(mipMaps => {
+                        if (imageType === 'A') {
+                            this.state.imageAMipMaps = mipMaps;
+                        } else {
+                            this.state.imageBMipMaps = mipMaps;
+                        }
+                        // Redraw with mipmaps available
+                        this.draw();
+                    });
+                    
+                    // Don't calculate PSNR on load - only on user interaction
+                    // This prevents blocking the UI with expensive pixel calculations
                     
                     // Resolve the promise to indicate successful completion
                     resolve();
@@ -1309,7 +1335,11 @@ export class ImageComparisonElement extends HTMLElement {
      * Update PSNR display using the component's isolated state.
      */
     private updatePSNR(): void {
-        const psnrText = calculatePSNRForImages(
+        // Show PSNR: N/A immediately while computing
+        this.psnrInfo.textContent = 'PSNR: N/A';
+        
+        // Calculate PSNR asynchronously with callback
+        calculatePSNRForImages(
             this.state.imageAData,
             this.state.imageBData,
             this.state.imageA,
@@ -1318,9 +1348,11 @@ export class ImageComparisonElement extends HTMLElement {
             this.state.offsetAY,
             this.state.offsetBX,
             this.state.offsetBY,
-            this.state.scale
+            this.state.scale,
+            (result) => {
+                this.psnrInfo.textContent = result;
+            }
         );
-        this.psnrInfo.textContent = psnrText;
     }
     
     /**
@@ -1374,11 +1406,14 @@ export class ImageComparisonElement extends HTMLElement {
         // Configure mouse move events for dragging and coordinate tracking
         this.state.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
         
+        // Add global mousemove listener to handle dragging outside canvas
+        document.addEventListener('mousemove', this.handleMouseMove.bind(this));
+        
         // Configure mouse up events for drag operation termination
         this.state.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
         
-        // Configure mouse leave events to ensure drag operations end when cursor exits
-        this.state.canvas.addEventListener('mouseleave', this.handleMouseUp.bind(this));
+        // Add global mouseup listener to handle mouse releases outside the canvas
+        document.addEventListener('mouseup', this.handleMouseUp.bind(this));
         
         // Configure wheel events for zoom functionality with passive prevention
         this.state.canvas.addEventListener('wheel', this.handleWheel.bind(this), { passive: false });
@@ -1572,15 +1607,34 @@ export class ImageComparisonElement extends HTMLElement {
      */
     private handleMouseMove(e: MouseEvent): void {
         const rect = this.state.canvas!.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        let x = e.clientX - rect.left;
+        let y = e.clientY - rect.top;
+        
+        // Clamp coordinates to canvas bounds when dragging
+        if (this.isDragging || this.activeHandle) {
+            x = Math.max(0, Math.min(x, rect.width));
+            y = Math.max(0, Math.min(y, rect.height));
+            
+            // Maintain cursor style when dragging outside canvas
+            if (this.isDragging) {
+                document.body.style.cursor = this.dragSide ? 'grabbing' : 'move';
+            } else if (this.activeHandle) {
+                document.body.style.cursor = this.activeHandle === 'translation' ? 'move' : 
+                                            this.activeHandle === 'rotation' ? 'crosshair' : 'ew-resize';
+            }
+        } else {
+            document.body.style.cursor = '';
+        }
         
         // Store current mouse position
         this.lastMouseX = x;
         this.lastMouseY = y;
         
-        // Update mouse position info and color values
-        this.updateMouseInfo(x, y);
+        // Update mouse position info and color values (only if inside canvas)
+        if (e.clientX >= rect.left && e.clientX <= rect.right && 
+            e.clientY >= rect.top && e.clientY <= rect.bottom) {
+            this.updateMouseInfo(x, y);
+        }
         
         // Handle wipe UI interaction
         if (this.activeHandle) {
@@ -1657,7 +1711,8 @@ export class ImageComparisonElement extends HTMLElement {
         this.showMagnifier = false;
         this.magnifierContainer.classList.add('hidden');
         
-        // Reset cursor
+        // Reset cursors
+        document.body.style.cursor = '';
         if (this.state.canvas) {
             this.state.canvas.style.cursor = 'move';
         }
@@ -1998,11 +2053,6 @@ export class ImageComparisonElement extends HTMLElement {
         e.preventDefault();
         e.stopPropagation();
         if (e.dataTransfer?.types.includes('Files')) {
-            // Don't highlight or change message if both images are loaded
-            if (this.state.imageALoaded && this.state.imageBLoaded) {
-                return;
-            }
-            
             const uploadBox = imageType === 'A' ? this.uploadA : this.uploadB;
             uploadBox.style.backgroundColor = '#888';
             this.dragMessage.textContent = `Drop to load as image ${imageType}`;
